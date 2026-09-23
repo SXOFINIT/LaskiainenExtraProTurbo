@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LaskiainenExtraProTurbo v12</title>
+<title>LaskiainenExtraProTurbo v13</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
@@ -98,6 +98,21 @@ input[type=number]{width:100%;border:1px solid #d0d5dd;border-radius:8px;padding
  .purchaseGroupBtn{grid-template-columns:1fr .8fr auto}
  .purchaseGroupBtn .hideMobile{display:none}
 }
+
+.filterPanel{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:14px;margin-top:12px}
+.filterField{display:flex;flex-direction:column;gap:5px;min-width:165px}.filterField.wide{min-width:240px}
+.filterField label{font-size:11px;font-weight:850;color:#475467}
+.filterField select,.filterField input{min-height:40px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;padding:8px 11px;font-weight:700;color:#344054}
+.filterHint{font-size:11px;color:#667085;align-self:center;max-width:480px}
+.summaryCollapse{margin-top:12px;border:1px solid #e4e7ec;border-radius:14px;background:#fff;overflow:hidden}
+.summaryCollapse summary{cursor:pointer;list-style:none;padding:13px 15px;font-weight:900;display:flex;justify-content:space-between;align-items:center;background:#f8fafc}
+.summaryCollapse summary::-webkit-details-marker{display:none}.summaryCollapse summary:after{content:"▶";font-size:11px;color:#667085}.summaryCollapse[open] summary:after{transform:rotate(90deg)}
+.summaryCollapseBody{padding:12px 14px}
+.dailyFilterPanel{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px;margin-top:12px;padding:13px;background:#f8fafc;border:1px solid #e4e7ec;border-radius:14px}
+.dailyFilterPanel .filterField{min-width:0}.statusNoPlan{border-left:5px solid #f04438!important;background:#fff7f6!important}.badgeNoPlan{background:#fee4e2;color:#b42318;border:1px solid #fecdca}
+.menuItem{border:1px solid #e4e7ec;border-radius:12px;overflow:hidden;background:#fff;margin-top:8px}.menuButton{width:100%;border:0;background:#fff;padding:11px 13px;display:grid;grid-template-columns:1.5fr .7fr .7fr auto;gap:10px;align-items:center;text-align:left;cursor:pointer;color:#344054}.menuButton:hover{background:#f9fafb}.menuName{font-weight:900}.menuMetric{text-align:right}.menuItem .recipeBox{display:none;border-top:1px solid #eaecf0;background:#fcfcfd}.menuItem.open .recipeBox{display:block}.menuItem.open .chev{transform:rotate(90deg)}.chev{font-size:12px;color:#667085;transition:.15s}
+.pasiGrid{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(320px,1.3fr);gap:14px;margin-top:12px}.pasiBox{border:1px solid #e4e7ec;border-radius:14px;background:#fff;padding:14px}.pasiMenus{max-height:430px;overflow:auto;border:1px solid #e4e7ec;border-radius:12px;padding:8px;background:#fcfcfd}.pasiMenu{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;padding:8px;border-bottom:1px solid #eaecf0}.pasiMenu:last-child{border-bottom:0}.pasiResult{font-size:32px;font-weight:950;letter-spacing:-.03em;margin-top:6px}.pasiEquation{font-size:12px;color:#667085;margin-top:5px}
+@media(max-width:900px){.dailyFilterPanel{grid-template-columns:1fr 1fr}.pasiGrid{grid-template-columns:1fr}}@media(max-width:650px){.dailyFilterPanel{grid-template-columns:1fr}.filterField{min-width:100%}.menuButton{grid-template-columns:1fr auto}.menuMetric{display:none}}
 </style>
 </head>
 <body>
@@ -143,58 +158,30 @@ Hävikki lasketaan DETAIL-riveistä. Lisäksi ostoaineisto tunnistetaan kentist�
 <button class="tab" data-tab="daily">Päivätaso</button>
 <button class="tab" data-tab="monitor">Seuranta</button>
 <button class="tab" data-tab="purchases">Ostot</button>
+<button class="tab" data-tab="pasi">Pasin Special</button>
 <button class="tab" data-tab="trend">Trendi</button>
 </div>
 
 <section id="summary" class="panel active">
-<div class="card">
-<div class="sectionTitle">Koko aineiston yhteenveto</div>
-<div class="sectionNote">Yhteenveto lasketaan aktiivisten toimipaikka- ja kuukausisuodattimien mukaisesta aineistosta. Leipäpöytä tulee aina SETMENU-tasolta.</div>
-<div class="dayFilters" style="grid-template-columns:1fr 2fr">
-<label><div class="fieldTitle">Yhteenvedon laskentataso</div>
-<select id="summaryLevel"><option value="SETMENU" selected>SETMENU – oletus</option><option value="DETAIL">DETAIL – tarkempi taso</option></select></label>
-<div id="summaryLevelInfo" class="sectionNote" style="align-self:end;margin-bottom:7px">Kg ja € lasketaan REPORT_LEVEL = SETMENU -riveiltä.</div>
-</div>
-<div id="summaryHero" class="hero"></div>
-<div id="scores" class="scoreRow"></div>
-</div>
-<div class="card" style="margin-top:13px">
-<div class="sectionTitle">Kuukausittainen yhteenveto</div>
-<div class="sectionNote">Jokaisen kuukauden luvut lasketaan vain aktiivisten suodattimien mukaisista toimipaikoista.</div>
-<div id="monthCards" class="months"></div>
-</div>
+<div class="card"><div class="sectionTitle">Yhteenveto</div>
+<div class="filterPanel"><div class="filterField wide"><label for="summaryLevel">Laskentataso</label><select id="summaryLevel"><option value="SETMENU" selected>SETMENU – ruokalistan kokonaisuus</option><option value="DETAIL">DETAIL – tarkempi taso</option></select></div><div id="summaryLevelInfo" class="filterHint">Kg ja € lasketaan REPORT_LEVEL = SETMENU -riveiltä.</div></div>
+<details class="summaryCollapse"><summary>Koko valinnan yhteenveto</summary><div class="summaryCollapseBody"><div class="sectionNote">Yhteenveto sisältää aktiivisten toimipaikka- ja kuukausisuodattimien aineiston.</div><div id="summaryHero" class="hero"></div><div id="scores" class="scoreRow"></div></div></details></div>
+<div class="card" style="margin-top:13px"><div class="sectionTitle">Kuukausittainen yhteenveto</div><div class="sectionNote">Kuukaudet näytetään uusimmasta vanhimpaan. Suunnitelma ja toteuma näytetään rinnakkain jokaiselle kuukaudelle.</div><div id="monthCards" class="months"></div></div>
 </section>
-
 
 <section id="daily" class="panel">
-<div class="card">
-<div class="sectionTitle">Päivätaso</div>
-<div class="sectionNote">
-Päivätason tietoja ei muodosteta automaattisesti koko aineistosta. Valitse ensin yläosan toimipaikat ja kuukaudet,
-sen jälkeen paina <strong>Näytä valitut päivät</strong>. Näin näkymä pysyy nopeana myös suurilla aineistoilla.
+<div class="card"><div class="sectionTitle">Päivätaso</div>
+<div class="sectionNote">Valitse ensin yläosan toimipaikat ja kuukaudet ja paina <strong>Näytä valitut päivät</strong>. Päivän tila ja ruokailijamäärä määräytyvät Leipäpöydän SETMENU-rivin perusteella.</div>
+<div class="dailyFilterPanel">
+<div class="filterField"><label for="dailyLevel">Laskentataso</label><select id="dailyLevel"><option value="SETMENU" selected>SETMENU – ruokalistan kokonaisuus</option><option value="DETAIL">DETAIL – tarkempi taso</option></select></div>
+<div class="filterField"><label for="dailyDate">Päivä</label><select id="dailyDate" disabled><option value="">Kaikki valitut päivät</option></select></div>
+<div class="filterField"><label for="dailyStatusFilter">Päivän tila</label><select id="dailyStatusFilter"><option value="ALL">Kaikki</option><option value="PLANNED">Suunnitellut</option><option value="PRODUCED">Toteutuneet</option><option value="NO_PLAN">Ei suunnitelmaa</option></select></div>
+<div class="filterField"><label for="dailyTarget">Tavoiteannoskustannus €</label><input id="dailyTarget" type="number" min="0" step="0.01" placeholder="esim. 3,50"></div>
+<div class="filterField"><label for="dailyTargetFilter">Näytä tavoitteen perusteella</label><select id="dailyTargetFilter"><option value="ALL">Kaikki</option><option value="ABOVE">Yli tavoitteen</option><option value="AT_OR_BELOW">Tavoitteessa tai alle</option></select></div>
+<div class="filterField" style="justify-content:end"><button id="loadDaily" class="btn primary" style="min-height:40px">Näytä valitut päivät</button></div>
 </div>
-
-<div class="dayFilters">
-<label><div class="fieldTitle">Laskentataso</div>
-<select id="dailyLevel"><option value="SETMENU" selected>SETMENU – oletus</option><option value="DETAIL">DETAIL – tarkempi taso</option></select></label>
-
-<label><div class="fieldTitle">Päivä</div>
-<select id="dailyDate" disabled><option value="">Kaikki valitut päivät</option></select></label>
-
-<label><div class="fieldTitle">Tavoiteannoskustannus €</div>
-<input id="dailyTarget" type="number" min="0" step="0.01" placeholder="esim. 3,50"></label>
-
-<label><div class="fieldTitle">Tavoitesuodatus</div>
-<select id="dailyTargetFilter"><option value="ALL">Kaikki päivät</option><option value="ABOVE">Yli tavoitteen</option><option value="AT_OR_BELOW">Tavoitteessa tai alle</option></select></label>
-
-<button id="loadDaily" class="btn primary">Näytä valitut päivät</button>
-</div>
-
-<div id="dailyStatus" class="dayLoadNote">Päiviä ei ole vielä ladattu näkymään.</div>
-<div id="dailySummary" class="hero" style="margin-top:10px"></div>
-<div id="dailyDays" class="dayList"></div>
-</div>
-</section>
+<div id="dailyLevelInfo" class="filterHint" style="margin-top:8px">Kg ja € näytetään REPORT_LEVEL = SETMENU -riveiltä.</div><div id="dailyStatus" class="dayLoadNote">Päiviä ei ole vielä ladattu näkymään.</div><div id="dailySummary" style="margin-top:10px"></div><div id="dailyDays" class="dayList"></div>
+</div></section>
 
 <section id="monitor" class="panel">
 <div class="card">
@@ -231,6 +218,14 @@ Näkymä käyttää samoja aktiivisia toimipaikka- ja kuukausisuodattimia kuin m
 <div id="purchaseGroups"></div>
 </div>
 </section>
+
+<section id="pasi" class="panel"><div class="card"><div class="sectionTitle">Pasin Special</div>
+<div class="sectionNote">Valitse laskentaan mukaan otettavat SETMENUt ja syötä suunniteltu kävijämäärä. Keskihinta = valittujen SETMENU-rivien <code>PLANNED_TOTAL_COST</code> yhteensä ÷ syötetty kävijämäärä. Laskenta käyttää yläosan aktiivisia toimipaikka- ja kuukausisuodattimia.</div>
+<div class="pasiGrid"><div class="pasiBox"><div class="filterField"><label for="pasiVisitors">Suunniteltu kävijämäärä</label><input id="pasiVisitors" type="number" min="1" step="1" placeholder="esim. 500"></div>
+<div style="margin-top:14px"><div class="fieldTitle">Valittujen SETMENUjen kustannus</div><div id="pasiCost" class="pasiResult">0,00 €</div></div>
+<div style="margin-top:14px"><div class="fieldTitle">Annoskustannus</div><div id="pasiAverage" class="pasiResult">–</div><div id="pasiEquation" class="pasiEquation">Valitse SETMENUt ja syötä kävijämäärä.</div></div></div>
+<div class="pasiBox"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px"><div><div class="fieldTitle">Laskentaan mukaan otettavat SETMENUt</div><div class="sectionNote">Valinta koskee kaikkia aktiivisilla suodattimilla löytyviä saman nimisiä SETMENU-rivejä.</div></div><div style="display:flex;gap:6px"><button id="pasiAll" class="btn">Kaikki</button><button id="pasiNone" class="btn">Ei mitään</button></div></div><div id="pasiMenus" class="pasiMenus"></div></div></div>
+</div></section>
 
 <section id="trend" class="panel">
 <div class="charts">
@@ -333,6 +328,7 @@ $('file').onchange=async e=>{
           date=dateKey(dateRaw),
           menu=norm(a[ix.SETMENUNAME]),
           recipe=norm(a[ix.ITEMNAME]),
+          itemType=ix.ITEMTYPE===undefined?'':norm(a[ix.ITEMTYPE]).toUpperCase(),
           setmenuId=ix.SETMENUID===undefined?'':norm(a[ix.SETMENUID]),
           itemId=ix.ITEMID===undefined?'':norm(a[ix.ITEMID]),
           reportLevel=norm(a[ix.REPORT_LEVEL]).toUpperCase();
@@ -361,7 +357,7 @@ $('file').onchange=async e=>{
         sourceFile:f.name
       });
 
-      if(menu.toLowerCase().includes('leipäpöytä')){
+      if(new Set(['leipäpöytä sc','leipäpöytä corp','leipäpöytä uni']).has(menu.trim().toLowerCase())){
         breadBySiteDate.set(site+'|'+date,{
           site,month,date,menu,
           planPort,
@@ -376,7 +372,7 @@ $('file').onchange=async e=>{
 
     const detailKey=site+'|'+date+'|'+(setmenuId||menu)+'|'+(itemId||recipe);
     detailByKey.set(detailKey,{
-      site,month,date,menu,recipe,setmenuId,itemId,
+      site,month,date,menu,recipe,itemType,setmenuId,itemId,
       planPort,prod,
       plannedKg:plannedTotalWeight,
       planCost:plannedTotalCost,
@@ -538,46 +534,17 @@ function renderAll(){
  buildMonitor(setmenuData);
  renderMonitor();
  renderPurchases();
+ renderPasiMenus();
  renderTrend(trendMonths);
 }
 function renderSummary(data,months){
- const sum=(arr,k)=>arr.reduce((s,x)=>s+(x[k]||0),0),past=months.filter(x=>x.month!==planningMonth),plan=months.find(x=>x.month===planningMonth);
- const hp={planKg:sum(past,'planKg'),planCost:sum(past,'planCost'),actualKg:sum(past,'actualKg'),actualCost:sum(past,'actualCost'),wasteKg:sum(past,'wasteKg'),wasteCost:sum(past,'wasteCost'),planBread:sum(past,'planBread'),actualBread:sum(past,'actualBread')};
- const all={planCost:sum(months,'planCost'),actualCost:sum(months,'actualCost'),planBread:sum(months,'planBread'),actualBread:sum(months,'actualBread')};
- const kgDiff=ratio(hp.actualKg,hp.planKg),costDiff=ratio(hp.actualCost,hp.planCost),planAvg=all.planBread?all.planCost/all.planBread:null,actualAvg=all.actualBread?all.actualCost/all.actualBread:null,
-       purchases=sum(months,'purchases');
- $('summaryHero').innerHTML=
- metricDual('Aiempien kk suunnitelma',num.format(hp.planKg)+' kg','kg',euro.format(hp.planCost),'kustannus')+
- metricDual('Aiempien kk toteuma',num.format(hp.actualKg)+' kg','kg',euro.format(hp.actualCost),'kustannus',cls(kgDiff))+
- metricDual('Aiempien kk ero',kgDiff==null?'–':pct.format(kgDiff),'kg',costDiff==null?'–':pct.format(costDiff),'kustannus',cls(Math.max(Math.abs(kgDiff||0),Math.abs(costDiff||0))))+
- metricDual('Aiempien kk hävikki',num.format(hp.wasteKg)+' kg','kg',euro.format(hp.wasteCost),'kustannus',hp.actualKg?cls(hp.wasteKg/hp.actualKg):'info')+
- metric('Koko valinnan suunniteltu annoskustannus (Plan € / SETMENU Leipäpöytä)',planAvg==null?'–':euro.format(planAvg),`${euro.format(all.planCost)} ÷ ${num.format(all.planBread)} suunniteltua SETMENU Leipäpöytä-annosta`,'info')+
- metric('Koko valinnan toteutunut annoskustannus (Actual € / SETMENU Leipäpöytä)',actualAvg==null?'–':euro.format(actualAvg),`${euro.format(all.actualCost)} ÷ ${num.format(all.actualBread)} toteutunutta SETMENU Leipäpöytä-annosta`,'info')+
- metricDual('Suunnittelukuukausi – suunnitelma',plan?num.format(plan.planKg)+' kg':'–','kg',plan?euro.format(plan.planCost):'–','kustannus','info')+
- metricDual('Suunnittelukuukausi – toteuma tähän asti',plan?num.format(plan.actualKg)+' kg':'–','kg',plan?euro.format(plan.actualCost):'–','kustannus',plan&&plan.actualKg?'good':'info')+
- metricDual('Suunnittelukuukausi – hävikki',plan?num.format(plan.wasteKg)+' kg':'–','kg',plan?euro.format(plan.wasteCost):'–','kustannus',plan&&plan.actualKg?cls(plan.wasteKg/plan.actualKg):'info')+
- metric('Ostot – valitut kuukaudet',purchaseBySiteMonth.size?euro.format(purchases):'–','NET_AMOUNT · aktiiviset toimipaikat ja kuukaudet','info');
- $('scores').innerHTML=
- score('Tuotannon kg: suunnitelma vs toteuma',kgDiff,'Suunnittelu ja toteuma kohtasivat hyvin.','Suunnitellun ja toteutuneen kilomäärän ero on suuri.')+
- score('Raaka-ainekustannus: suunnitelma vs toteuma',costDiff,'Kustannussuunnittelu osui hyvin toteumaan.','Suunnitellun ja toteutuneen kustannuksen ero on suuri.')+
- score('Hävikkitaso',hp.actualKg?hp.wasteKg/hp.actualKg:null,'Hävikin osuus tuotetuista kiloista on matala.','Hävikin osuus tuotetuista kiloista on korkea.');
- $('monthCards').innerHTML=[...months].sort((a,b)=>b.month.localeCompare(a.month)).map(m=>{
-  const kgVar=m.planKg?ratio(m.actualKg,m.planKg):null,costVar=m.planCost?ratio(m.actualCost,m.planCost):null,waste=m.actualKg?m.wasteKg/m.actualKg:null,isPlan=m.month===planningMonth,kgS=monthEmoji(kgVar,isPlan),coS=monthEmoji(costVar,isPlan),waS=wasteEmoji(waste),pAvg=m.planBread?m.planCost/m.planBread:null,aAvg=m.actualBread?m.actualCost/m.actualBread:null;
-  return`<div class="monthCard ${isPlan?'planning':''}"><div class="monthHead"><div class="monthName">${esc(monthName(m.month))}</div>${isPlan?'<span class="tag">Suunnittelukuukausi</span>':''}</div>
-  <div class="monthScores"><span class="mScore"><span class="emo">${kgS[0]}</span>Kilot: ${kgS[1]}</span><span class="mScore"><span class="emo">${coS[0]}</span>Kustannus: ${coS[1]}</span><span class="mScore"><span class="emo">${waS[0]}</span>Hävikki: ${waS[1]}</span></div>
-  <div class="monthGrid monthGridTop">
-  <div class="mini"><div class="k">Suunnitelma</div><div class="dual"><div><div class="dualVal">${num.format(m.planKg)} kg</div><div class="dualLbl">kg</div></div><div><div class="dualVal">${euro.format(m.planCost)}</div><div class="dualLbl">€</div></div></div></div>
-  <div class="mini"><div class="k">Toteuma</div><div class="dual"><div><div class="dualVal">${num.format(m.actualKg)} kg</div><div class="dualLbl">kg</div></div><div><div class="dualVal">${euro.format(m.actualCost)}</div><div class="dualLbl">€</div></div></div></div>
-  <div class="mini"><div class="k">Ostot</div><div class="dual"><div><div class="dualVal">${euro.format(m.purchases||0)}</div><div class="dualLbl">NET_AMOUNT</div></div><div><div class="dualVal">${m.purchases?'Ostot':'ei aineistoa'}</div><div class="dualLbl">${esc(monthName(m.month))}</div></div></div></div>
-  </div>
-  <div class="monthGrid monthGridBottom">
-  <div class="mini"><div class="k">Annoskustannus</div><div class="dual"><div><div class="dualVal">${pAvg==null?'–':euro.format(pAvg)}</div><div class="dualLbl">plan</div></div><div><div class="dualVal">${aAvg==null?'–':euro.format(aAvg)}</div><div class="dualLbl">actual</div></div></div></div>
-  <div class="mini"><div class="k">Hävikki</div><div class="dual"><div><div class="dualVal">${num.format(m.wasteKg)} kg</div><div class="dualLbl">kg</div></div><div><div class="dualVal">${euro.format(m.wasteCost)}</div><div class="dualLbl">€</div></div></div></div>
-  <div class="mini"><div class="k">Leipäpöytä</div><div class="dual"><div><div class="dualVal">${num.format(m.planBread)}</div><div class="dualLbl">plan</div></div><div><div class="dualVal">${num.format(m.actualBread)}</div><div class="dualLbl">actual</div></div></div></div>
-  </div></div></div>`}).join('');
+ const sum=(arr,k)=>arr.reduce((s,x)=>s+(x[k]||0),0),planKg=sum(months,'planKg'),planCost=sum(months,'planCost'),actualKg=sum(months,'actualKg'),actualCost=sum(months,'actualCost'),wasteKg=sum(months,'wasteKg'),wasteCost=sum(months,'wasteCost'),planBread=sum(months,'planBread'),actualBread=sum(months,'actualBread'),purchases=sum(months,'purchases'),planAvg=planBread?planCost/planBread:null,actualAvg=actualBread?actualCost/actualBread:null;
+ $('summaryHero').innerHTML=metric('Suunnitelma',`${num.format(planKg)} kg · ${euro.format(planCost)}`,'aktiivinen valinta','info')+metric('Toteuma',`${num.format(actualKg)} kg · ${euro.format(actualCost)}`,'aktiivinen valinta','info')+metric('Ostot',euro.format(purchases),'NET_AMOUNT · aktiivinen valinta','info')+metric('Hävikki',`${num.format(wasteKg)} kg · ${euro.format(wasteCost)}`,'aktiivinen valinta','info')+metric('Annoskustannus',`${planAvg==null?'–':euro.format(planAvg)} / ${actualAvg==null?'–':euro.format(actualAvg)}`,'suunnitelma / toteuma','info')+metric('Ruokailijat',`${num.format(planBread)} / ${num.format(actualBread)}`,'suunnitelma / toteuma','info'); $('scores').innerHTML='';
+ $('monthCards').innerHTML=[...months].sort((a,b)=>b.month.localeCompare(a.month)).map(m=>{const aAvg=m.actualBread?m.actualCost/m.actualBread:null,pAvg=m.planBread?m.planCost/m.planBread:null,kgVar=m.planKg?ratio(m.actualKg,m.planKg):null,costVar=m.planCost?ratio(m.actualCost,m.planCost):null,waste=m.actualKg?m.wasteKg/m.actualKg:null,kgS=monthEmoji(kgVar,false),coS=monthEmoji(costVar,false),waS=wasteEmoji(waste);
+ return`<div class="monthCard"><div class="monthHead"><div class="monthName">${esc(monthName(m.month))}</div></div><div class="monthScores"><span class="mScore"><span class="emo">${kgS[0]}</span>Kilot: ${kgS[1]}</span><span class="mScore"><span class="emo">${coS[0]}</span>Kustannus: ${coS[1]}</span><span class="mScore"><span class="emo">${waS[0]}</span>Hävikki: ${waS[1]}</span></div>
+ <div class="monthGrid monthGridTop"><div class="mini"><div class="k">Suunnitelma</div><div class="dual"><div><div class="dualVal">${num.format(m.planKg)} kg</div><div class="dualLbl">kg</div></div><div><div class="dualVal">${euro.format(m.planCost)}</div><div class="dualLbl">€</div></div></div></div><div class="mini"><div class="k">Toteuma</div><div class="dual"><div><div class="dualVal">${num.format(m.actualKg)} kg</div><div class="dualLbl">kg</div></div><div><div class="dualVal">${euro.format(m.actualCost)}</div><div class="dualLbl">€</div></div></div></div><div class="mini"><div class="k">Ostot</div><div class="dual"><div><div class="dualVal">${euro.format(m.purchases||0)}</div><div class="dualLbl">NET_AMOUNT</div></div><div><div class="dualVal">${m.purchases?'Ostot':'ei aineistoa'}</div><div class="dualLbl">${esc(monthName(m.month))}</div></div></div></div></div>
+ <div class="monthGrid monthGridBottom"><div class="mini"><div class="k">Annoskustannus</div><div class="dual"><div><div class="dualVal">${pAvg==null?'–':euro.format(pAvg)}</div><div class="dualLbl">plan</div></div><div><div class="dualVal">${aAvg==null?'–':euro.format(aAvg)}</div><div class="dualLbl">actual</div></div></div></div><div class="mini"><div class="k">Hävikki</div><div class="dual"><div><div class="dualVal">${num.format(m.wasteKg)} kg</div><div class="dualLbl">kg</div></div><div><div class="dualVal">${euro.format(m.wasteCost)}</div><div class="dualLbl">€</div></div></div></div><div class="mini"><div class="k">Leipäpöytä</div><div class="dual"><div><div class="dualVal">${num.format(m.planBread)}</div><div class="dualLbl">plan</div></div><div><div class="dualVal">${num.format(m.actualBread)}</div><div class="dualLbl">actual</div></div></div></div></div></div>`}).join('');
 }
-
-
 
 function filteredPurchaseDetails(){
  const sites=selectedSites(),months=selectedMonths();
@@ -678,142 +645,24 @@ $('purchaseCollapseAll').onclick=()=>document.querySelectorAll('[data-purchase-g
 
 function renderDaily(){
  if(!dailyLoaded)return;
-
- const levelData=filteredLevelData(dailyMode),
-       detailData=filteredLevelData('DETAIL'),
-       sites=selectedSites(),months=selectedMonths(),
-       breadData=[...breadBySiteDate.values()].filter(x=>sites.has(x.site)&&months.has(x.month)),
-       modeName=dailyMode==='DETAIL'?'DETAIL':'SETMENU';
-
- const totalsByKey=new Map();
- for(const x of levelData){
-   const k=x.site+'|'+x.date,
-         d=totalsByKey.get(k)||{site:x.site,date:x.date,month:x.month,planKg:0,planCost:0,actualKg:0,actualCost:0};
-   d.planKg+=x.plannedKg||0; d.planCost+=x.planCost||0;
-   d.actualKg+=x.actualKg||0; d.actualCost+=x.actualCost||0;
-   totalsByKey.set(k,d);
- }
-
- const breadMap=new Map();
- for(const b of breadData)breadMap.set(b.site+'|'+b.date,{plan:b.planPort||0,actual:b.prod||0});
-
- const days=new Map();
- for(const x of detailData){
-   const k=x.site+'|'+x.date,
-         t=totalsByKey.get(k)||{site:x.site,date:x.date,month:x.month,planKg:0,planCost:0,actualKg:0,actualCost:0},
-         b=breadMap.get(k)||{plan:0,actual:0},
-         d=days.get(k)||{
-           site:x.site,date:x.date,month:x.month,
-           planKg:t.planKg,planCost:t.planCost,actualKg:t.actualKg,actualCost:t.actualCost,
-           bread:b.plan,actualBread:b.actual,
-           hasActual:(t.actualKg>0||t.actualCost>0||b.actual>0),
-           menus:new Map()
-         };
-
-   const m=d.menus.get(x.menu)||{name:x.menu,recipes:[],kg:0,cost:0,actualKg:0,actualCost:0};
-   m.kg+=x.plannedKg||0;m.cost+=x.planCost||0;m.actualKg+=x.actualKg||0;m.actualCost+=x.actualCost||0;
-   m.recipes.push(x);
-   d.menus.set(x.menu,m);days.set(k,d);
- }
-
- for(const [k,t] of totalsByKey){
-   if(days.has(k))continue;
-   const b=breadMap.get(k)||{plan:0,actual:0};
-   days.set(k,{
-     site:t.site,date:t.date,month:t.month,
-     planKg:t.planKg,planCost:t.planCost,actualKg:t.actualKg,actualCost:t.actualCost,
-     bread:b.plan,actualBread:b.actual,
-     hasActual:(t.actualKg>0||t.actualCost>0||b.actual>0),
-     menus:new Map()
-   });
- }
-
- const allDates=[...new Set([...days.values()].map(x=>x.date))].sort();
- const oldDate=$('dailyDate').value;
- $('dailyDate').disabled=false;
- $('dailyDate').innerHTML='<option value="">Kaikki valitut päivät</option>'+allDates.map(d=>`<option value="${d}">${fiDate(d)}</option>`).join('');
- if(allDates.includes(oldDate))$('dailyDate').value=oldDate;
-
- const dateFilter=$('dailyDate').value,
-       tr=String($('dailyTarget').value||'').replace(',','.'),
-       target=tr===''?null:Number(tr),
-       tf=$('dailyTargetFilter').value;
-
- let rows=[...days.values()].sort((a,b)=>a.date.localeCompare(b.date)||a.site.localeCompare(b.site,'fi'));
- rows=rows.filter(d=>{
-   if(dateFilter&&d.date!==dateFilter)return false;
-   const portions=d.hasActual&&d.actualBread>0?d.actualBread:d.bread,
-         cost=d.hasActual&&d.actualCost>0?d.actualCost:d.planCost,
-         avg=portions?cost/portions:null;
-   if(target==null||!Number.isFinite(target)||tf==='ALL')return true;
-   if(avg==null)return false;
-   return tf==='ABOVE'?avg>target:avg<=target;
- });
-
- $('dailyStatus').textContent=`${rows.length} toimipaikka-päivää näytetään · ${modeName}-laskenta · ${selectedSites().size} toimipaikkaa · ${selectedMonths().size} kuukautta`;
- $('dailySummary').innerHTML=
-   metric('Näytettävät päivärivit',num.format(rows.length),'toimipaikka + päivä','info')+
-   metric('Laskentataso',modeName,`REPORT_LEVEL = ${modeName}`,'info')+
-   metric('Tavoiteannoskustannus',target!=null&&Number.isFinite(target)?euro.format(target):'–',target==null?'Ei asetettu':'€/ruokailija','info');
-
- if(!rows.length){
-   $('dailyDays').innerHTML='<div class="card"><div class="sectionNote">Valituilla suodattimilla ei löytynyt päiviä.</div></div>';
-   return;
- }
-
- $('dailyDays').innerHTML=rows.map((d,di)=>{
-   const pAvg=d.bread?d.planCost/d.bread:null,
-         aAvg=d.actualBread?d.actualCost/d.actualBread:null,
-         avg=d.hasActual&&aAvg!=null?aAvg:pAvg,
-         above=target!=null&&Number.isFinite(target)&&avg!=null&&avg>target,
-         cl=target!=null&&Number.isFinite(target)&&avg!=null?(above?'badLevel':'goodLevel'):'',
-         produced=d.hasActual?'<span class="badge badgeProd">✓ Toteutunut</span>':'<span class="badge badgePlan">Suunnitelma</span>',
-         targetBadge=target!=null&&Number.isFinite(target)&&avg!=null?(above?'<span class="badge badgeBad">Yli tavoitteen</span>':'<span class="badge badgeGood">Tavoitteessa</span>'):'',
-         breadLabel=d.hasActual?'Ruokailijoita / toteuma':'Ruokailijoita / suunnitelma',
-         breadVal=d.hasActual&&d.actualBread>0?d.actualBread:d.bread;
-
-   const menus=[...d.menus.values()].sort((a,b)=>b.cost-a.cost).map((m,mi)=>{
-     const recipes=[...m.recipes].sort((a,b)=>b.planCost-a.planCost);
-     const body=recipes.map(r=>{
-       const qty=r.planPort||0,unit=qty?r.planCost/qty:null;
-       return`<tr><td>${esc(r.recipe||'(resepti puuttuu)')}</td><td class="num">${num.format(qty)}</td><td class="num">${num.format(r.plannedKg)} kg</td><td class="num">${euro.format(r.planCost)}</td><td class="num">${unit==null?'–':euro.format(unit)}</td><td class="num">${num.format(r.actualKg)} kg</td><td class="num">${euro.format(r.actualCost)}</td></tr>`;
-     }).join('');
-     return`<div class="menuItem">
-       <button class="menuButton" type="button" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">
-         <div><div class="menuName">${esc(m.name)}</div><div class="dayMeta">${recipes.length} reseptiä</div></div>
-         <div><div class="mKey">Plan kg</div><div class="mVal">${num.format(m.kg)}</div></div>
-         <div><div class="mKey">Plan €</div><div class="mVal">${euro.format(m.cost)}</div></div>
-         <div><div class="mKey">Actual kg</div><div class="mVal">${num.format(m.actualKg)}</div></div>
-         <div class="chev">▶</div>
-       </button>
-       <div class="recipeBox"><div class="tablewrap" style="margin:0;border:0;border-radius:0;max-height:none"><table class="recipeTable"><thead><tr><th>Resepti</th><th class="num">Määrä</th><th class="num">Plan kg</th><th class="num">Plan €</th><th class="num">€/annos</th><th class="num">Actual kg</th><th class="num">Actual €</th></tr></thead><tbody>${body}</tbody></table></div></div>
-     </div>`;
-   }).join('');
-
-   return`<div class="dayCard ${cl}">
-     <div class="dayHead" onclick="this.parentElement.classList.toggle('open')">
-       <div><div class="dayTitle">${fiDate(d.date)} · ${esc(d.site)}</div><div class="dayMeta">${monthName(d.month)} · ${modeName}-laskenta · ${d.menus.size} SETMENU-kokonaisuutta</div></div>
-       <div class="dayBadges">${produced}${targetBadge}</div>
-     </div>
-     <div class="dayStats">
-       <div class="dayStat"><div class="k">${breadLabel}</div><div class="v">${num.format(breadVal)}</div></div>
-       <div class="dayStat"><div class="k">Plan kg</div><div class="v">${num.format(d.planKg)} kg</div></div>
-       <div class="dayStat"><div class="k">Plan €</div><div class="v">${euro.format(d.planCost)}</div></div>
-       <div class="dayStat"><div class="k">€/ruokailija</div><div class="v">${avg==null?'–':euro.format(avg)}</div></div>
-       <div class="dayStat"><div class="k">Actual kg</div><div class="v">${num.format(d.actualKg)} kg</div></div>
-       <div class="dayStat"><div class="k">Actual €</div><div class="v">${euro.format(d.actualCost)}</div></div>
-     </div>
-     <div class="menuList">${menus}</div>
-   </div>`;
- }).join('');
+ const sites=selectedSites(),months=selectedMonths(),detailData=[...detailByKey.values()].filter(x=>sites.has(x.site)&&months.has(x.month)),setmenuData=[...setmenuByKey.values()].filter(x=>sites.has(x.site)&&months.has(x.month)),breadData=[...breadBySiteDate.values()].filter(x=>sites.has(x.site)&&months.has(x.month)),levelData=dailyMode==='DETAIL'?detailData:setmenuData,modeName=dailyMode==='DETAIL'?'DETAIL':'SETMENU';
+ $('dailyLevelInfo').textContent=dailyMode==='DETAIL'?'Päivän kokonaisluvut näytetään DETAIL-tasolta. Päivän tila ja ruokailijamäärä tulevat aina Leipäpöydän SETMENU-riviltä.':'Päivän kokonaisluvut näytetään SETMENU-tasolta. Päivän tila ja ruokailijamäärä tulevat aina Leipäpöydän SETMENU-riviltä.';
+ const totals=new Map();for(const x of levelData){const k=x.site+'|'+x.date,d=totals.get(k)||{site:x.site,date:x.date,month:x.month,planKg:0,planCost:0,actualKg:0,actualCost:0};d.planKg+=x.plannedKg||0;d.planCost+=x.planCost||0;d.actualKg+=x.actualKg||0;d.actualCost+=x.actualCost||0;totals.set(k,d)}
+ const bread=new Map();for(const b of breadData)bread.set(b.site+'|'+b.date,{plan:b.planPort||0,actual:b.prod||0,month:b.month});
+ const lines=detailData.filter(x=>{const t=(x.itemType||'').toUpperCase();return t==='RECIPE'||t==='INVENTORY_ITEM'||!t}),linesByKey=new Map();for(const x of lines){const k=x.site+'|'+x.date,a=linesByKey.get(k)||[];a.push(x);linesByKey.set(k,a)}
+ const keys=[...new Set([...totals.keys(),...bread.keys(),...linesByKey.keys()])],allDates=[...new Set(keys.map(k=>k.slice(k.lastIndexOf('|')+1)))].sort(),oldDate=$('dailyDate').value;
+ $('dailyDate').disabled=false;$('dailyDate').innerHTML='<option value="">Kaikki valitut päivät</option>'+allDates.map(d=>`<option value="${d}">${fiDate(d)}</option>`).join('');if(allDates.includes(oldDate))$('dailyDate').value=oldDate;
+ const dateFilter=$('dailyDate').value,statusFilter=$('dailyStatusFilter').value,tr=String($('dailyTarget').value||'').replace(',','.'),target=tr===''?null:Number(tr),tf=$('dailyTargetFilter').value;
+ let days=keys.map(k=>{const t=totals.get(k)||{site:k.slice(0,k.lastIndexOf('|')),date:k.slice(k.lastIndexOf('|')+1),month:'',planKg:0,planCost:0,actualKg:0,actualCost:0},b=bread.get(k)||{plan:0,actual:0,month:t.month},hasPlan=b.plan>0,hasProduced=b.actual>0,status=hasPlan&&hasProduced?'PRODUCED':hasPlan?'PLANNED':hasProduced?'NO_PLAN':'UNKNOWN',useActual=status==='PRODUCED'||status==='NO_PLAN',portions=useActual?b.actual:b.plan,cost=useActual?t.actualCost:t.planCost,avg=portions>0?cost/portions:null;return{...t,month:t.month||b.month,bread:b.plan,actualBread:b.actual,status,useActual,avg,lines:linesByKey.get(k)||[]}}).filter(d=>{if(dateFilter&&d.date!==dateFilter)return false;if(statusFilter!=='ALL'&&d.status!==statusFilter)return false;if(target==null||!Number.isFinite(target)||tf==='ALL')return true;if(d.avg==null)return false;return tf==='ABOVE'?d.avg>target:d.avg<=target}).sort((a,b)=>a.date.localeCompare(b.date)||a.site.localeCompare(b.site,'fi'));
+ $('dailyStatus').textContent=`${days.length} toimipaikka-päivää · ${modeName}-laskenta`;$('dailySummary').innerHTML='';
+ if(!days.length){$('dailyDays').innerHTML='<div class="card"><div class="sectionNote">Valituilla suodattimilla ei löytynyt päiviä.</div></div>';return}
+ $('dailyDays').innerHTML=days.map(d=>{const planned=d.status==='PLANNED',produced=d.status==='PRODUCED',noPlan=d.status==='NO_PLAN',statusBadge=produced?'<span class="badge badgeProd">✓ Toteutunut</span>':planned?'<span class="badge badgePlan">Suunniteltu</span>':noPlan?'<span class="badge badgeNoPlan">⚠ Ei suunnitelmaa</span>':'<span class="badge badgeWarn">Ei ruokailijatietoa</span>',breadLabel=d.useActual?'Ruokailijoita / toteuma':'Ruokailijoita / suunnitelma',breadValue=d.useActual?d.actualBread:d.bread,kg=d.useActual?d.actualKg:d.planKg,cost=d.useActual?d.actualCost:d.planCost,avgLabel=d.useActual?'Toteutunut hinta / ruokailija':'Suunniteltu hinta / ruokailija',targetAbove=target!=null&&Number.isFinite(target)&&d.avg!=null&&d.avg>target,targetBadge=target!=null&&Number.isFinite(target)&&d.avg!=null?(targetAbove?'<span class="badge badgeBad">Yli tavoitteen</span>':'<span class="badge badgeGood">Tavoitteessa</span>'):'',cardClass=noPlan?'statusNoPlan':(target!=null&&Number.isFinite(target)&&d.avg!=null?(targetAbove?'badLevel':'goodLevel'):''),rowMode=d.useActual?'ACTUAL':'PLAN';
+ const rowLines=d.lines.filter(x=>rowMode==='PLAN'?((x.plannedKg||0)!==0||(x.planCost||0)!==0||(x.planPort||0)!==0):((x.actualKg||0)!==0||(x.actualCost||0)!==0||(x.prod||0)!==0)),menus=new Map();
+ for(const x of (dailyMode==='DETAIL'?detailData:setmenuData).filter(x=>x.site===d.site&&x.date===d.date)){const name=x.menu||'(Ruokalista puuttuu)',g=menus.get(name)||{name,kg:0,cost:0,lines:[]};g.kg+=rowMode==='PLAN'?(x.plannedKg||0):(x.actualKg||0);g.cost+=rowMode==='PLAN'?(x.planCost||0):(x.actualCost||0);menus.set(name,g)}
+ for(const x of rowLines){const name=x.menu||'(Ruokalista puuttuu)',g=menus.get(name)||{name,kg:0,cost:0,lines:[]};g.lines.push(x);menus.set(name,g)}
+ const menuHtml=[...menus.values()].filter(g=>g.lines.length||g.kg!==0||g.cost!==0).sort((a,b)=>a.name.localeCompare(b.name,'fi',{sensitivity:'base'})).map(g=>{const rowHtml=g.lines.sort((a,b)=>{const av=rowMode==='PLAN'?(a.planCost||0):(a.actualCost||0),bv=rowMode==='PLAN'?(b.planCost||0):(b.actualCost||0);return bv-av||(a.recipe||'').localeCompare(b.recipe||'','fi')}).map(x=>{const rkg=rowMode==='PLAN'?(x.plannedKg||0):(x.actualKg||0),rcost=rowMode==='PLAN'?(x.planCost||0):(x.actualCost||0);return`<tr><td>${esc(x.recipe||'(nimi puuttuu)')}</td><td class="num">${num.format(rkg)} kg</td><td class="num">${euro.format(rcost)}</td></tr>`}).join('');return`<div class="menuItem"><button class="menuButton" type="button" onclick="const p=this.parentElement;p.classList.toggle('open')"><div><div class="menuName">${esc(g.name)}</div><div class="dayMeta">${g.lines.length} resepti- / raaka-aineriviä</div></div><div class="menuMetric"><div class="mKey">${d.useActual?'Toteutunut':'Suunniteltu'} kg</div><div class="mVal">${num.format(g.kg)} kg</div></div><div class="menuMetric"><div class="mKey">${d.useActual?'Toteutunut':'Suunniteltu'} €</div><div class="mVal">${euro.format(g.cost)}</div></div><span class="chev">▶</span></button><div class="recipeBox">${g.lines.length?`<div class="tablewrap" style="margin:0;max-height:none;border:0;border-radius:0"><table><thead><tr><th>Ruoka / raaka-aine</th><th class="num">${d.useActual?'Toteutunut':'Suunniteltu'} kg</th><th class="num">${d.useActual?'Toteutunut':'Suunniteltu'} €</th></tr></thead><tbody>${rowHtml}</tbody></table></div>`:'<div class="info">Tälle ruokalistalle ei löytynyt RECIPE / INVENTORY_ITEM -rivejä.</div>'}</div></div>`}).join('');
+ return`<div class="dayCard ${cardClass}"><div class="dayHead" onclick="this.parentElement.classList.toggle('open')"><div><div class="dayTitle">${fiDate(d.date)} · ${esc(d.site)}</div><div class="dayMeta">${monthName(d.month)} · ${rowLines.length} resepti- / raaka-aineriviä</div></div><div class="dayBadges">${statusBadge}${targetBadge}<span class="dayToggle">▶</span></div></div><div class="dayStats"><div class="dayStat"><div class="k">${breadLabel}</div><div class="v">${num.format(breadValue)}</div></div><div class="dayStat"><div class="k">${d.useActual?'Toteutunut':'Suunniteltu'} kg</div><div class="v">${num.format(kg)} kg</div></div><div class="dayStat"><div class="k">${d.useActual?'Toteutunut':'Suunniteltu'} €</div><div class="v">${euro.format(cost)}</div></div><div class="dayStat"><div class="k">${avgLabel}</div><div class="v">${d.avg==null?'–':euro.format(d.avg)}</div></div></div><div class="menuList">${menuHtml||'<div class="info">Päivälle ei löytynyt ruokalistoja.</div>'}</div></div>`}).join('');
 }
-
-$('loadDaily').onclick=()=>{dailyLoaded=true;renderDaily()};
-$('dailyLevel').onchange=e=>{dailyMode=e.target.value;if(dailyLoaded)renderDaily()};
-$('dailyDate').onchange=()=>{if(dailyLoaded)renderDaily()};
-$('dailyTarget').oninput=()=>{if(dailyLoaded)renderDaily()};
-$('dailyTargetFilter').onchange=()=>{if(dailyLoaded)renderDaily()};
-
 
 function buildMonitor(data){
  const m=new Map();
@@ -908,6 +757,11 @@ $('exportMonitor').onclick=()=>{
  const rows=filteredMonitorRows().map(r=>{const[s]=monitorStatusInfo(r);return{'Toimipaikka':r.site,'Päivä':r.date,'Kuukausi':monthName(r.month),'Plan kg':r.planKg,'Plan €':r.planCost,'Plan €/kg':r.planPerKg,'Plan annoskustannus':r.planAvg,'Actual kg':r.actualKg,'Actual €':r.actualCost,'Actual €/kg':r.actualPerKg,'Actual annoskustannus':r.actualAvg,'Kg ero %':r.kgDiffPct,'€ ero %':r.costDiffPct,'Hävikki kg':r.wasteKg,'Hävikki €':r.wasteCost,'Tila':s}});
  const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Seuranta');XLSX.writeFile(wb,'LaskiainenExtraProTurbo_Seuranta.xlsx');
 };
+
+function pasiRows(){const sites=selectedSites(),months=selectedMonths();return[...setmenuByKey.values()].filter(x=>sites.has(x.site)&&months.has(x.month))}
+function renderPasiMenus(){if(!$('pasiMenus'))return;const rows=pasiRows(),byName=new Map();for(const x of rows){const name=x.menu||'(Ruokalista puuttuu)',g=byName.get(name)||{name,cost:0,count:0};g.cost+=x.planCost||0;g.count++;byName.set(name,g)}const current=new Set([...document.querySelectorAll('[data-pasi-menu]:checked')].map(x=>x.value));$('pasiMenus').innerHTML=[...byName.values()].sort((a,b)=>a.name.localeCompare(b.name,'fi')).map(g=>`<label class="pasiMenu"><input type="checkbox" data-pasi-menu value="${esc(g.name)}" ${current.has(g.name)?'checked':''}><span><b>${esc(g.name)}</b><br><span class="sectionNote">${g.count} SETMENU-riviä</span></span><span>${euro.format(g.cost)}</span></label>`).join('')||'<div class="sectionNote">Aktiivisilla suodattimilla ei löytynyt SETMENU-rivejä.</div>';document.querySelectorAll('[data-pasi-menu]').forEach(x=>x.onchange=calculatePasi);calculatePasi()}
+function calculatePasi(){if(!$('pasiAverage'))return;const selected=new Set([...document.querySelectorAll('[data-pasi-menu]:checked')].map(x=>x.value)),cost=pasiRows().filter(x=>selected.has(x.menu)).reduce((s,x)=>s+(x.planCost||0),0),visitors=Number($('pasiVisitors').value||0),avg=visitors>0?cost/visitors:null;$('pasiCost').textContent=euro.format(cost);$('pasiAverage').textContent=avg==null?'–':euro.format(avg);$('pasiEquation').textContent=visitors>0?`${euro.format(cost)} ÷ ${num.format(visitors)} kävijää = ${euro.format(avg)} / kävijä`:'Syötä suunniteltu kävijämäärä.'}
+$('pasiVisitors').oninput=calculatePasi;$('pasiAll').onclick=()=>{document.querySelectorAll('[data-pasi-menu]').forEach(x=>x.checked=true);calculatePasi()};$('pasiNone').onclick=()=>{document.querySelectorAll('[data-pasi-menu]').forEach(x=>x.checked=false);calculatePasi()};
 
 function renderTrend(months){
  const labels=months.map(x=>monthName(x.month));
